@@ -8,13 +8,12 @@
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
-#include "usart.h"
 #include "gpio.h"
 
 /* ========== 硬件定义（按你的实际连接修改） ========== */
 #define AD9833_SPI            hspi1
 #define AD9833_CS_PORT        GPIOA
-#define AD9833_CS_PIN         GPIO_PIN_3        // FSYNC 片选引脚
+#define AD9833_CS_PIN         GPIO_PIN_5        // FSYNC 片选引脚
 #define AD9833_MCLK           25000000UL        // 参考时钟 25 MHz
 
 /* ========== 寄存器常量（摘自原版 AD9833.h） ========== */
