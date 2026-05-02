@@ -2,14 +2,19 @@
 #define __CORE_HANDLE_H
 
 #include "gpio.h"
+#include <stdio.h>
 
 #define DEBUG 	0
+
+extern UART_HandleTypeDef huart3;
 
 typedef struct {
 	float Rin;
 	float Rout;
 	float Gain;
 	float CutOff_Freq;
+	float DCout;
+	float ACout;
 }TRAIT;
 
 typedef enum {

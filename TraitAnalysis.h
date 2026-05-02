@@ -8,6 +8,7 @@
 #define ADC_LEN		1024
 #define RS_IN 		1000
 #define RS_OUT		1000
+#define INF 		-1
 
 typedef struct{
 	float Uin; 		//未加采样电阻的输入电压
@@ -27,5 +28,6 @@ void ADC_Start(void);
 void Process_FFT(float* pVol,float* pDC);
 void Resistence_Cal(TRAIT* trait);
 void FFT(float* input_Data,float* pDC,float* pVol);
+float MeasCut_offFreq(void);
 
 #endif

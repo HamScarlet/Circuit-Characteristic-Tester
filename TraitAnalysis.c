@@ -80,6 +80,7 @@ void Split_DC_AC(float* pData,float* pAC_Data,float* pDC) //好像不需要
 void Resistence_Cal(TRAIT* trait) 	//输入输出电阻及增益计算主逻辑
 {
 	Wave_Freq = 1000.0f;
+	Generate_Wave(Wave_Freq);
 	Set_SampleRate(Cal_Sample_Rate(Wave_Freq));
 	Set_Key_Statue(BREAK);
 	ADC_Start();
@@ -106,9 +107,65 @@ void Resistence_Cal(TRAIT* trait) 	//输入输出电阻及增益计算主逻辑
 	ADC1_flag = 0;
 	ADC2_flag = 0;
 	ADC3_flag = 0;
+	if(Measure_Para.Uin_s - Measure_Para.Uin == 0)
+	{
+		trait->Rin = INF;
+	}
+	else{
 	trait->Rin =  Measure_Para.Uin*RS_IN/(Measure_Para.Uin_s - Measure_Para.Uin);
-	trait->Rout = Measure_Para.DCout*RS_OUT/Measure_Para.DCout_s - RS_OUT;
-	trait->Gain = Measure_Para.DCout/Measure_Para.DCin;
+	}
+	if(Measure_Para.DCout_s == 0)
+	{
+		trait->Rout = INF;
+	}
+	else
+	{
+		trait->Rout = Measure_Para.DCout*RS_OUT/Measure_Para.DCout_s - RS_OUT;
+	}
+	if(Measure_Para.Uin == 0)
+	{
+		trait->Gain = INF;
+	}
+	else{
+	trait->Gain = Measure_Para.Uout/Measure_Para.Uin;
+	}
+	trait->ACout = Measure_Para.Uout;
+	trait->DCout = Measure_Para.DCout;
+}
+
+float MeasCut_offFreq(void)
+{
+	float Freq = 1000.0f;
+	Set_Key_Statue(BREAK);
+	float Base_Gain = Measure_Para.Uout/Measure_Para.Uin;
+	float Meas_Gain = Base_Gain;
+	if(Base_Gain == INF) return -1;
+	while(Meas_Gain/Base_Gain > 0.707f)
+	{
+		Wave_Freq += 2000.0f;
+		Generate_Wave(Wave_Freq);
+		Set_SampleRate(Cal_Sample_Rate(Wave_Freq));
+		ADC1_flag = 0;
+		ADC2_flag = 0;
+		ADC3_flag = 0;
+		ADC_Start();
+		if (ADC1_flag == 1 && ADC2_flag == 1 && ADC3_flag == 1)
+		{
+			Convert_ADC_data(ADC1_raw_buf,ADC1_buf);
+			Convert_ADC_data(ADC2_raw_buf,ADC2_buf);
+			Convert_ADC_data(ADC3_raw_buf,ADC3_buf);
+			FFT(ADC1_buf,&Measure_Para.DCin_s,&Measure_Para.Uin_s);
+			FFT(ADC2_buf,&Measure_Para.DCin,&Measure_Para.Uin);
+			FFT(ADC3_buf,&Measure_Para.DCout,&Measure_Para.Uout);
+		}
+		ADC1_flag = 0;
+		ADC2_flag = 0;
+		ADC3_flag = 0;
+		
+		Meas_Gain = Measure_Para.Uout/Measure_Para.Uin;
+		printf("%f\n",Meas_Gain);
+	}
+	return Wave_Freq;
 }
 
 void FFT(float* input_Data,float* pDC,float* pVol)
