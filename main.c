@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <fun.h>
 #include "AD9833.h"
+
+#include "Integrated_main.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -196,9 +199,26 @@ int main(void)
   
   AD9833_Init();                            // DDS初始化  
   AD9833_SetFrequencyQuick (1000.0f, AD9833_OUT_TRIANGLE);  // 输出 1kHz 正弦波
-  
+
+
+
+  // 可以简化为：
+  Integrated_Init();
+  // ----------- //
+
+
+
   while (1)
   {
+    // 可以集成为：
+    Integrated_Loop();
+    // ---------------- //
+
+
+
+
+
+
 	  if(switch_kg == 1)                //一、基础部分测量
 	  {
 		  //1.测量输入电阻
