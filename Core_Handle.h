@@ -1,7 +1,7 @@
 #ifndef __CORE_HANDLE_H
 #define __CORE_HANDLE_H
 
-
+#include "gpio.h"
 
 #define DEBUG 	0
 

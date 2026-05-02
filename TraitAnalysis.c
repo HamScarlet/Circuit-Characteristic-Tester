@@ -5,18 +5,22 @@
 
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+extern ADC_HandleTypeDef hadc3;
 extern TIM_HandleTypeDef htim3;
 
 uint16_t ADC1_raw_buf[ADC_LEN] = {0};
 uint16_t ADC2_raw_buf[ADC_LEN] = {0};
+uint16_t ADC3_raw_buf[ADC_LEN] = {0};
 float ADC1_buf[ADC_LEN] = {0};
 float ADC2_buf[ADC_LEN] = {0};
+float ADC3_buf[ADC_LEN] = {0};
 uint8_t Whole_Wave_Num = 11; 	//一个采样周期内整周期个数（最好是奇数）
 
 float Wave_Freq = 1000.0f;
 float Sample_Rate = 10000.0f;
 uint8_t ADC1_flag = 0;
 uint8_t ADC2_flag = 0;
+uint8_t ADC3_flag = 0;
 
 MEAS_DATA Measure_Para;
 
@@ -34,8 +38,10 @@ void ADC_Start(void)
 {
 	HAL_ADCEx_Calibration_Start(&hadc1,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
 	HAL_ADCEx_Calibration_Start(&hadc2,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
+	HAL_ADCEx_Calibration_Start(&hadc3,ADC_CALIB_OFFSET,ADC_SINGLE_ENDED);
 	HAL_ADC_Start_DMA(&hadc1,(uint32_t*)ADC1_raw_buf,ADC_LEN);
 	HAL_ADC_Start_DMA(&hadc2,(uint32_t*)ADC2_raw_buf,ADC_LEN);
+	HAL_ADC_Start_DMA(&hadc3,(uint32_t*)ADC3_raw_buf,ADC_LEN);
 	HAL_TIM_Base_Start(&htim3);
 }
 
@@ -46,6 +52,12 @@ void Set_SampleRate(float Freq)
 	uint16_t new_arr = APB2_Clock/Freq - 1;
 	
 	__HAL_TIM_SET_AUTORELOAD(&htim3,new_arr);
+}
+
+float Cal_Sample_Rate(float Freq)
+{
+	float fs = Freq*1024/Whole_Wave_Num;
+	return fs;
 }
 
 void Generate_Wave(float Freq)
@@ -59,24 +71,42 @@ void Convert_ADC_data(uint16_t *pData,float* pAnalogy_Data)
 	arm_mult_f32((float *)pData,&ADC_Coefficient,pAnalogy_Data,ADC_LEN);
 }
 
-void Split_DC_AC(float* pData,float* pAC_Data,float* pDC)
+void Split_DC_AC(float* pData,float* pAC_Data,float* pDC) //好像不需要
 {
 	arm_mean_f32(pData,ADC_LEN,pDC);
 	arm_sub_f32(pData,pDC,pAC_Data,ADC_LEN);
-}  //好像不需要
+}  
 
-void Resistence_Cal(TRAIT* trait) 	//输入输出电阻计算主逻辑
+void Resistence_Cal(TRAIT* trait) 	//输入输出电阻及增益计算主逻辑
 {
 	Wave_Freq = 1000.0f;
-	Set_SampleRate(Wave_Freq);
+	Set_SampleRate(Cal_Sample_Rate(Wave_Freq));
 	ADC_Start();
-	if (ADC1_flag == 1 && ADC2_flag == 1)
+	if (ADC1_flag == 1 && ADC2_flag == 1 && ADC3_flag == 1)
 	{
 		Convert_ADC_data(ADC1_raw_buf,ADC1_buf);
 		Convert_ADC_data(ADC2_raw_buf,ADC2_buf);
-		FFT(ADC1_buf,&Measure_Para.DCin,&Measure_Para.Uin);
-		FFT(ADC2_buf,&Measure_Para.DCout,&Measure_Para.Uout);
+		Convert_ADC_data(ADC3_raw_buf,ADC3_buf);
+		FFT(ADC1_buf,&Measure_Para.DCin_s,&Measure_Para.Uin_s);
+		FFT(ADC2_buf,&Measure_Para.DCin,&Measure_Para.Uin);
+		FFT(ADC3_buf,&Measure_Para.DCout,&Measure_Para.Uout);
 	}
+	ADC1_flag = 0;
+	ADC2_flag = 0;
+	ADC3_flag = 0;
+	Circuit_Switch();
+	ADC_Start();
+	if (ADC1_flag == 1 && ADC2_flag == 1 && ADC3_flag == 1)
+	{
+		Convert_ADC_data(ADC3_raw_buf,ADC3_buf);
+		FFT(ADC3_buf,&Measure_Para.DCout_s,&Measure_Para.Uout_s);
+	}
+	ADC1_flag = 0;
+	ADC2_flag = 0;
+	ADC3_flag = 0;
+	trait->Rin =  Measure_Para.Uin*RS_IN/(Measure_Para.Uin_s - Measure_Para.Uin);
+	trait->Rout = Measure_Para.DCout*RS_OUT/Measure_Para.DCout_s - RS_OUT;
+	trait->Gain = Measure_Para.DCout/Measure_Para.DCin;
 }
 
 void FFT(float* input_Data,float* pDC,float* pVol)
@@ -124,31 +154,7 @@ void Process_FFT(float* pVol,float* pDC)
 	
 	*pDC = FFT_mag[0]*2.0f/(float)ADC_LEN;
 	*pVol = FFT_mag_max*2.0f/(float)ADC_LEN;
-//	for(int i = 0;i < 5;i++)
-//	{
-//		float max_mag = 0;
-//		float exact_amp = 0;
-//		float freq = 0;
-//		uint16_t peak_index;
-//		for(int j = -2;j < 3;j++)
-//		{
-//			if(max_mag < FFT_mag[FFT_mag_max_index*(i+1)+j])
-//			{
-//				max_mag = FFT_mag[FFT_mag_max_index*(i+1)+j];
-//				peak_index = FFT_mag_max_index*(i+1)+j;
-//			}
-//		}
-//		exact_amp = Extract_Exact_Amplitude(FFT_mag,peak_index,FFT_LEN,&freq);
-//		FFT_Ampl[i] = exact_amp*2.0f/(float)FFT_LEN;
-//		if(i==0)
-//		{
-//			FFT_Base_Freq = freq;
-//		}
-//	}
 }
-
-
-
 
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
@@ -162,9 +168,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 	}
 	else if(hadc ->Instance == ADC2)
 	{
-//		HAL_TIM_Base_Stop(&htim3);
-//		HAL_ADC_Stop_DMA(&hadc1);
-		
 		ADC2_flag = 1;
+	}
+	else if(hadc ->Instance == ADC3)
+	{
+		ADC3_flag = 1;
 	}
 }

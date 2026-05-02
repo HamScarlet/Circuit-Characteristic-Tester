@@ -6,6 +6,8 @@
 #include "Community.h"
 
 #define ADC_LEN		1024
+#define RS_IN 		1000
+#define RS_OUT		1000
 
 typedef struct{
 	float Uin; 		//未加采样电阻的输入电压
