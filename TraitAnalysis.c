@@ -81,6 +81,7 @@ void Resistence_Cal(TRAIT* trait) 	//输入输出电阻及增益计算主逻辑
 {
 	Wave_Freq = 1000.0f;
 	Set_SampleRate(Cal_Sample_Rate(Wave_Freq));
+	Set_Key_Statue(BREAK);
 	ADC_Start();
 	if (ADC1_flag == 1 && ADC2_flag == 1 && ADC3_flag == 1)
 	{
@@ -94,7 +95,8 @@ void Resistence_Cal(TRAIT* trait) 	//输入输出电阻及增益计算主逻辑
 	ADC1_flag = 0;
 	ADC2_flag = 0;
 	ADC3_flag = 0;
-	Circuit_Switch();
+	//Circuit_Switch();
+	Set_Key_Statue(CLOSED);
 	ADC_Start();
 	if (ADC1_flag == 1 && ADC2_flag == 1 && ADC3_flag == 1)
 	{

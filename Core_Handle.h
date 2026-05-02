@@ -12,6 +12,12 @@ typedef struct {
 	float CutOff_Freq;
 }TRAIT;
 
+typedef enum {
+	BREAK = 0,
+	CLOSED
+}KEY_STATUE;
+
+
 
 typedef struct{
 	
@@ -20,5 +26,6 @@ typedef struct{
 void Core_Init(void);
 void Core_Loop(void);
 void Circuit_Switch(void);
+void Set_Key_Statue(KEY_STATUE statue);
 
 #endif

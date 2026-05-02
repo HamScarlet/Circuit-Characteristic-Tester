@@ -33,3 +33,8 @@ void Circuit_Switch(void)
 		statue = 1;
 	}
 }
+
+void Set_Key_Statue(KEY_STATUE statue)
+{
+	HAL_GPIO_WritePin(GPIOE,GPIO_PIN_10,(uint8_t)statue);
+}
